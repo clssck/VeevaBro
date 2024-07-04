@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lock and Load</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="popup">
+    <h2>Lock and Load</h2>
+
+    <div id="sessionIdContainer">
+      Session Status:
+      <div id="sessionIndicator" class="indicator-red"></div>
+    </div>
+
+    <button id="settingsButton">Open Settings</button>
+
+    <label for="objectSelect">Select Object:</label>
+    <select id="objectSelect">
+      <!-- Options will be populated dynamically -->
+    </select>
+
+    <label for="lifecycleSelect">Select Lifecycle:</label>
+    <select id="lifecycleSelect">
+      <!-- Options will be populated dynamically -->
+    </select>
+
+    <label for="objectIds">Object IDs (comma separated):</label>
+    <input type="text" id="objectIds" />
+
+    <button id="generateCsvButton">Generate CSV</button>
+    <button id="uploadAndLoadButton">Upload and Load CSV</button>
+
+    <div id="status"></div>
+    <div id="log"></div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

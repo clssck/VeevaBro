@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VeevaBro - Options</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="options">
+    <div class="options-content">
+      <h2>Veeva Vault RIM Authenticator - Options</h2>
+
+      <label for="vaultUrl">Vault URL:</label>
+      <input type="text" id="vaultUrl" />
+
+      <label for="apiVersion">API Version:</label>
+      <input type="text" id="apiVersion" />
+
+      <label for="username">Username:</label>
+      <input type="text" id="username" />
+
+      <label for="password">Password:</label>
+      <input type="password" id="password" />
+
+      <button id="saveButton">Save</button>
+      <button id="testButton">Test Connection</button>
+
+      <div id="status"></div>
+
+      <div id="sessionIdContainer">
+        Session Status:
+        <div id="sessionIndicator" class="indicator"></div>
+      </div>
+    </div>
+
+    <script src="options.js"></script>
+  </body>
+</html>
