@@ -4,18 +4,16 @@
   "version": "1.0",
   "description": "LiveLaughLiao - A tool for managing object lifecycles",
   "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "48": "purple_cat.png",
+    "128": "purple_cat.png"
   },
   "permissions": ["storage", "identity", "activeTab"],
   "host_permissions": ["https://*.veevavault.com/*"],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
+      "48": "purple_cat.png",
+      "128": "purple_cat.png"
     }
   },
   "background": {
