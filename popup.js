@@ -1,70 +1,80 @@
 document.addEventListener("DOMContentLoaded", function () {
-  // Get DOM elements
-  const settingsButton = document.getElementById("settingsButton");
-  const generateCsvButton = document.getElementById("generateCsvButton");
-  const uploadAndLoadButton = document.getElementById("uploadAndLoadButton");
-  const statusDiv = document.getElementById("status");
-  const logDiv = document.getElementById("log");
-  const sessionIdContainer = document.getElementById("sessionIdContainer");
-  const sessionIndicator = document.getElementById("sessionIndicator");
-  const objectSelect = document.getElementById("objectSelect");
-  const lifecycleSelect = document.getElementById("lifecycleSelect");
-  const objectIdsInput = document.getElementById("objectIds");
+  const elements = {
+    settingsButton: document.getElementById("settingsButton"),
+    generateCsvButton: document.getElementById("generateCsvButton"),
+    uploadAndLoadButton: document.getElementById("uploadAndLoadButton"),
+    statusDiv: document.getElementById("status"),
+    logDiv: document.getElementById("log"),
+    sessionIndicator: document.getElementById("sessionIndicator"),
+    objectSelect: document.getElementById("objectSelect"),
+    lifecycleSelect: document.getElementById("lifecycleSelect"),
+    objectIdsInput: document.getElementById("objectIds"),
+    form: document.getElementById("lockAndLoadForm"),
+  };
 
   console.log("DOM fully loaded and parsed");
 
   // Check for existing session ID
   chrome.storage.sync.get("sessionId", function (data) {
-    if (data.sessionId) {
-      sessionIdContainer.style.display = "block";
-      sessionIndicator.classList.remove("indicator-red");
-      sessionIndicator.classList.add("indicator-green");
-    } else {
-      sessionIdContainer.style.display = "block";
-      sessionIndicator.classList.remove("indicator-green");
-      sessionIndicator.classList.add("indicator-red");
-    }
+    updateSessionIndicator(!!data.sessionId);
   });
 
-  settingsButton.addEventListener("click", function () {
+  // Load saved form data
+  loadFormData();
+
+  // Event Listeners
+  elements.settingsButton.addEventListener("click", openSettings);
+  elements.generateCsvButton.addEventListener("click", handleGenerateCsv);
+  elements.uploadAndLoadButton.addEventListener("click", handleUploadAndLoad);
+  elements.form.addEventListener("input", saveFormData);
+  elements.objectSelect.addEventListener("change", updateLifecycleSelect);
+
+  // Load config and populate selects
+  loadConfigAndPopulateSelects();
+
+  function updateSessionIndicator(hasSession) {
+    elements.sessionIndicator.classList.toggle("indicator-green", hasSession);
+    elements.sessionIndicator.classList.toggle("indicator-red", !hasSession);
+  }
+
+  function openSettings() {
     if (chrome.runtime.openOptionsPage) {
       chrome.runtime.openOptionsPage();
     } else {
       window.open(chrome.runtime.getURL("options.html"));
     }
-  });
+  }
 
-  // Load config.json and populate the object select dropdown
-  fetch(chrome.runtime.getURL("config.json"))
-    .then((response) => response.json())
-    .then((data) => {
-      populateObjectSelect(data.objects);
-    })
-    .catch((error) => {
-      logError("Error loading config.json:", error);
-      updateStatus("Error loading configuration", true);
-    });
+  function loadConfigAndPopulateSelects() {
+    fetch(chrome.runtime.getURL("config.json"))
+      .then((response) => response.json())
+      .then((data) => {
+        populateObjectSelect(data.objects);
+      })
+      .catch((error) => {
+        logError("Error loading config.json:", error);
+        updateStatus("Error loading configuration", true);
+      });
+  }
 
   function populateObjectSelect(objects) {
-    objectSelect.innerHTML = "";
-    objects.forEach((object) => {
-      const option = document.createElement("option");
-      option.value = object.value;
-      option.textContent = object.label;
-      objectSelect.appendChild(option);
-    });
-    // Populate lifecycle select based on the first object
+    elements.objectSelect.innerHTML = objects
+      .map(
+        (object) => `<option value="${object.value}">${object.label}</option>`
+      )
+      .join("");
+
     if (objects.length > 0) {
       populateLifecycleSelect(objects[0].states);
     }
   }
 
-  objectSelect.addEventListener("change", function () {
+  function updateLifecycleSelect() {
     fetch(chrome.runtime.getURL("config.json"))
       .then((response) => response.json())
       .then((data) => {
         const selectedObject = data.objects.find(
-          (object) => object.value === objectSelect.value
+          (object) => object.value === elements.objectSelect.value
         );
         if (selectedObject) {
           populateLifecycleSelect(selectedObject.states);
@@ -74,22 +84,19 @@ document.addEventListener("DOMContentLoaded", function () {
         logError("Error loading config.json:", error);
         updateStatus("Error loading configuration", true);
       });
-  });
-
-  function populateLifecycleSelect(lifecycles) {
-    lifecycleSelect.innerHTML = "";
-    lifecycles.forEach((lifecycle) => {
-      const option = document.createElement("option");
-      option.value = lifecycle.value;
-      option.textContent = lifecycle.label;
-      lifecycleSelect.appendChild(option);
-    });
   }
 
-  generateCsvButton.addEventListener("click", function () {
-    const objectIds = objectIdsInput.value;
-    const lifecycle = lifecycleSelect.value;
-    const objectType = objectSelect.value;
+  function populateLifecycleSelect(lifecycles) {
+    elements.lifecycleSelect.innerHTML = lifecycles
+      .map(
+        (lifecycle) =>
+          `<option value="${lifecycle.value}">${lifecycle.label}</option>`
+      )
+      .join("");
+  }
+
+  function handleGenerateCsv() {
+    const { objectIds, lifecycle, objectType } = getFormData();
 
     if (!objectIds || !lifecycle || !objectType) {
       updateStatus("Error: All fields are required", true);
@@ -108,35 +115,30 @@ document.addEventListener("DOMContentLoaded", function () {
     downloadCSV(csvContent, filename);
     updateStatus("CSV generated successfully", false);
     logMessage("CSV generated successfully");
-  });
+  }
 
-  uploadAndLoadButton.addEventListener("click", function () {
+  function handleUploadAndLoad() {
     chrome.storage.sync.get(
       ["vaultUrl", "apiVersion", "sessionId"],
       function (items) {
-        const sessionId = items.sessionId;
-        const objectIds = objectIdsInput.value;
-        const lifecycle = lifecycleSelect.value;
-        const objectType = objectSelect.value;
-        let vaultUrl = items.vaultUrl;
-        const apiVersion = items.apiVersion;
+        const { objectIds, lifecycle, objectType } = getFormData();
+        const { sessionId, vaultUrl: rawVaultUrl, apiVersion } = items;
 
         if (
           !sessionId ||
           !objectIds ||
           !lifecycle ||
           !objectType ||
-          !vaultUrl ||
+          !rawVaultUrl ||
           !apiVersion
         ) {
           updateStatus("Error: All fields are required", true);
           return;
         }
 
-        // Ensure vaultUrl does not end with a slash
-        if (vaultUrl.endsWith("/")) {
-          vaultUrl = vaultUrl.slice(0, -1);
-        }
+        const vaultUrl = rawVaultUrl.endsWith("/")
+          ? rawVaultUrl.slice(0, -1)
+          : rawVaultUrl;
 
         const validatedObjectIds = validateObjectIds(objectIds);
         if (!validatedObjectIds) {
@@ -153,177 +155,117 @@ document.addEventListener("DOMContentLoaded", function () {
           vaultUrl,
           apiVersion,
           filename,
-          objectType // Pass the selected object type
+          objectType
         );
       }
     );
-  });
+  }
+
+  function getFormData() {
+    return {
+      objectIds: elements.objectIdsInput.value,
+      lifecycle: elements.lifecycleSelect.value,
+      objectType: elements.objectSelect.value,
+    };
+  }
+
+  function saveFormData() {
+    chrome.storage.local.set({ formData: getFormData() });
+  }
+
+  function loadFormData() {
+    chrome.storage.local.get("formData", function (result) {
+      if (result.formData) {
+        elements.objectSelect.value = result.formData.objectType;
+        elements.lifecycleSelect.value = result.formData.lifecycle;
+        elements.objectIdsInput.value = result.formData.objectIds;
+      }
+    });
+  }
 
   function validateObjectIds(objectIds) {
-    const ids = objectIds.split(",").map((id) => id.trim());
-    for (const id of ids) {
-      if (!id || /[^a-zA-Z0-9]/.test(id)) {
-        return null;
-      }
-    }
-    return ids.join(",");
+    const trimmedIds = objectIds.split(",").map((id) => id.trim());
+    const validIds = trimmedIds.filter((id) => id !== "");
+    return validIds.length > 0 ? validIds : null;
   }
 
   function generateCSV(objectIds, lifecycle) {
-    const rows = objectIds.split(",").map((id) => `${id},${lifecycle}`);
-    return `id,state__v\n${rows.join("\n")}`;
+    const header = "Object ID,Lifecycle";
+    const rows = objectIds.map((id) => `${id},${lifecycle}`).join("\n");
+    return `${header}\n${rows}`;
   }
 
-  function downloadCSV(csvContent, filename) {
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  function downloadCSV(content, filename) {
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", filename);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   }
 
-  async function uploadAndLoadFile(
+  function uploadAndLoadFile(
     sessionId,
     objectIds,
     lifecycle,
     vaultUrl,
     apiVersion,
     filename,
-    objectType // Add objectType parameter
+    objectType
   ) {
-    try {
-      const csvContent = generateCSV(objectIds, lifecycle);
-      const csvBlob = new Blob([csvContent], { type: "text/csv" });
-      const csvFile = new File([csvBlob], filename);
+    const csvContent = generateCSV(objectIds, lifecycle);
+    const formData = new FormData();
+    formData.append(
+      "file",
+      new Blob([csvContent], { type: "text/csv" }),
+      filename
+    );
 
-      // Upload the CSV file to the staging server
-      const formData = new FormData();
-      formData.append("file", csvFile);
-      formData.append("path", `/u13063421/upload/${filename}`);
-      formData.append("kind", "file");
-      formData.append("overwrite", "true");
-
-      logMessage("Uploading CSV file...");
-      const uploadResponse = await fetch(
-        `${vaultUrl}/api/v${apiVersion}/services/file_staging/items`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: sessionId,
-            Accept: "application/json",
-          },
-          body: formData,
-        }
-      );
-
-      if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text();
-        logError("Failed to upload CSV file:", errorText);
-        updateStatus("Failed to upload CSV file", true);
-        return;
-      }
-
-      const uploadResult = await uploadResponse.json();
-      logMessage("Upload result: SUCCESS");
-      logDetailedMessage("Upload result:", uploadResult);
-
-      if (!uploadResult.data || !uploadResult.data.path) {
-        logError("Upload response is missing expected data:", uploadResult);
-        updateStatus("Failed to upload CSV file", true);
-        return;
-      }
-
-      const stagingFilePath = uploadResult.data.path;
-
-      // Load the file from the staging server
-      logMessage("Loading file from staging server...");
-      const loadRequestBody = [
-        {
-          object_type: "vobjects__v",
-          object: objectType, // Use the selected object type
-          action: "update",
-          file: stagingFilePath,
-          recordmigrationmode: true,
-          order: 1,
+    fetch(
+      `${vaultUrl}/api/${apiVersion}/objects/${objectType}/batch/actions/load_csv`,
+      {
+        method: "POST",
+        headers: {
+          "X-VaultAPI-DescribeMetadata": "true",
+          Authorization: sessionId,
         },
-      ];
-      logDetailedMessage("Load request body:", loadRequestBody); // Log the request body
-
-      const loadResponse = await fetch(
-        `${vaultUrl}/api/v${apiVersion}/services/loader/load`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: sessionId,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(loadRequestBody),
-        }
-      );
-
-      if (!loadResponse.ok) {
-        const errorText = await loadResponse.text();
-        logError("Failed to load file from staging server:", errorText);
-        updateStatus("Failed to load file from staging server", true);
-        return;
+        body: formData,
       }
+    )
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.responseStatus === "SUCCESS") {
+          updateStatus("File uploaded and loaded successfully", false);
+          logMessage("File uploaded and loaded successfully");
+        } else {
+          throw new Error(data.errors[0].message);
+        }
+      })
+      .catch((error) => {
+        updateStatus(`Error: ${error.message}`, true);
+        logError("Error uploading and loading file:", error);
+      });
+  }
 
-      const loadResult = await loadResponse.json();
-      logMessage("Load result: SUCCESS");
-      logDetailedMessage("Load result:", loadResult);
-      updateStatus("File loaded successfully", false);
-    } catch (error) {
-      logError("Error during upload and load process:", error);
-      updateStatus("Error during upload and load process", true);
-    }
+  function updateStatus(message, isError) {
+    elements.statusDiv.textContent = message;
+    elements.statusDiv.className = `status ${isError ? "error" : "success"}`;
   }
 
   function logMessage(message) {
     const logEntry = document.createElement("div");
-    logEntry.className = "log-entry";
-    const logTitle = document.createElement("div");
-    logTitle.className = "log-title";
-    logTitle.textContent = message;
-    logEntry.appendChild(logTitle);
-    logDiv.appendChild(logEntry);
-  }
-
-  function logDetailedMessage(message, data) {
-    const logEntry = document.createElement("div");
-    logEntry.className = "log-entry";
-    const logTitle = document.createElement("div");
-    logTitle.className = "log-title";
-    logTitle.textContent = message;
-    const details = document.createElement("details");
-    const summary = document.createElement("summary");
-    summary.textContent = "Details";
-    const pre = document.createElement("pre");
-    pre.className = "log-details";
-    pre.textContent = JSON.stringify(data, null, 2);
-    details.appendChild(summary);
-    details.appendChild(pre);
-    logEntry.appendChild(logTitle);
-    logEntry.appendChild(details);
-    logDiv.appendChild(logEntry);
+    logEntry.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+    elements.logDiv.appendChild(logEntry);
+    elements.logDiv.scrollTop = elements.logDiv.scrollHeight;
   }
 
   function logError(message, error) {
-    const logEntry = document.createElement("div");
-    logEntry.className = "log-entry";
-    const logTitle = document.createElement("div");
-    logTitle.className = "log-title";
-    logTitle.textContent = `${message} ${error}`;
-    logTitle.style.color = "red";
-    logEntry.appendChild(logTitle);
-    logDiv.appendChild(logEntry);
-  }
-
-  function updateStatus(message, isError) {
-    statusDiv.textContent = message;
-    statusDiv.className = isError ? "error" : "success";
+    console.error(message, error);
+    logMessage(`${message} ${error.message}`);
   }
 });

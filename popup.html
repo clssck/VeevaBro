@@ -11,33 +11,43 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body class="popup">
-    <h2>Lock and Load</h2>
+    <h1>Lock and Load</h1>
 
     <div id="sessionIdContainer">
-      Session Status:
-      <div id="sessionIndicator" class="indicator-red"></div>
+      <span>Session Status:</span>
+      <div
+        id="sessionIndicator"
+        class="indicator-red"
+        aria-label="Session status indicator"
+      ></div>
     </div>
 
     <button id="settingsButton">Open Settings</button>
 
-    <label for="objectSelect">Select Object:</label>
-    <select id="objectSelect">
-      <!-- Options will be populated dynamically -->
-    </select>
+    <form id="csvForm">
+      <div>
+        <label for="objectSelect">Select Object:</label>
+        <select id="objectSelect" required></select>
+      </div>
 
-    <label for="lifecycleSelect">Select Lifecycle:</label>
-    <select id="lifecycleSelect">
-      <!-- Options will be populated dynamically -->
-    </select>
+      <div>
+        <label for="lifecycleSelect">Select Lifecycle:</label>
+        <select id="lifecycleSelect" required></select>
+      </div>
 
-    <label for="objectIds">Object IDs (comma separated):</label>
-    <input type="text" id="objectIds" />
+      <div>
+        <label for="objectIds">Object IDs (comma separated):</label>
+        <input type="text" id="objectIds" required />
+      </div>
 
-    <button id="generateCsvButton">Generate CSV</button>
-    <button id="uploadAndLoadButton">Upload and Load CSV</button>
+      <button type="button" id="generateCsvButton">Generate CSV</button>
+      <button type="button" id="uploadAndLoadButton">
+        Upload and Load CSV
+      </button>
+    </form>
 
-    <div id="status"></div>
-    <div id="log"></div>
+    <div id="status" aria-live="polite"></div>
+    <div id="log" aria-live="polite"></div>
 
     <script src="popup.js"></script>
   </body>
