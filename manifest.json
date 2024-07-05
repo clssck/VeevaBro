@@ -2,16 +2,21 @@
   "manifest_version": 3,
   "name": "Risky Business",
   "version": "1.0",
-  "description": "LiveLaughLiao",
+  "description": "LiveLaughLiao - A tool for managing object lifecycles",
   "icons": {
-    "48": "purple_cat.png",
-    "128": "purple_cat.png"
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
   "permissions": ["storage", "identity", "activeTab"],
   "host_permissions": ["https://*.veevavault.com/*"],
   "action": {
     "default_popup": "popup.html",
-    "default_icon": "purple_cat.png"
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
   "background": {
     "service_worker": "background.js"
@@ -22,7 +27,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["images/*.png"],
+      "resources": ["config.json", "images/*.png"],
       "matches": ["<all_urls>"]
     }
   ]
