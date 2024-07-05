@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lock and Load</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="popup">
+    <div class="container">
+      <header>
+        <h1>Lock and Load</h1>
+        <div id="sessionIdContainer">
+          <span>Session Status:</span>
+          <div
+            id="sessionIndicator"
+            aria-label="Session status indicator"
+          ></div>
+        </div>
+      </header>
+
+      <main>
+        <form id="csvForm">
+          <div class="form-group">
+            <label for="objectSelect">Select Object</label>
+            <select id="objectSelect" required></select>
+          </div>
+
+          <div class="form-group">
+            <label for="lifecycleSelect">Select Lifecycle</label>
+            <select id="lifecycleSelect" required></select>
+          </div>
+
+          <div class="form-group">
+            <label for="objectIds">Object IDs (comma separated)</label>
+            <input type="text" id="objectIds" required />
+          </div>
+
+          <div class="button-group">
+            <button
+              type="button"
+              id="generateCsvButton"
+              class="btn btn-primary"
+            >
+              Generate CSV
+            </button>
+            <button
+              type="button"
+              id="uploadAndLoadButton"
+              class="btn btn-secondary"
+            >
+              Upload and Load CSV
+            </button>
+          </div>
+        </form>
+
+        <div id="status" aria-live="polite"></div>
+        <div id="log" aria-live="polite"></div>
+      </main>
+
+      <footer>
+        <button id="settingsButton" class="btn btn-text">Open Settings</button>
+      </footer>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

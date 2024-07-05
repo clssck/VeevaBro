@@ -1,0 +1,114 @@
+{
+  "objects": [
+    {
+      "label": "Application",
+      "value": "application__v",
+      "states": [
+        { "label": "Active", "value": "active_state__c" },
+        { "label": "Inactive", "value": "inactive_state__c" }
+      ]
+    },
+    {
+      "label": "Regulatory Objective",
+      "value": "regulatory_objective__rim",
+      "states": [
+        {
+          "label": "Health Authority Approved",
+          "value": "health_authority_approved_state__rim"
+        },
+        { "label": "In Progress", "value": "in_progress_state__c" },
+        { "label": "Inactive", "value": "inactive_state__c" },
+        { "label": "Not Approved", "value": "not_approved_state__c" },
+        { "label": "On Hold by HA", "value": "on_hold_by_ha_state__c" },
+        {
+          "label": "On Hold by Health Authority",
+          "value": "on_hold_by_health_authority_state__c"
+        },
+        { "label": "On Hold by MAH", "value": "on_hold_by_mah_state__c" },
+        { "label": "Planned", "value": "planned_state__c" },
+        {
+          "label": "Procedure End Opinion",
+          "value": "procedure_end_opinion_state__c"
+        },
+        { "label": "Withdrawn", "value": "withdrawn_state__c" }
+      ]
+    },
+    {
+      "label": "Registration",
+      "value": "registration__rim",
+      "states": [
+        { "label": "Approved", "value": "approved_state1__c" },
+        { "label": "Closed", "value": "closed_state__c" },
+        { "label": "Expired", "value": "expired_state__c" },
+        { "label": "On Hold", "value": "on_hold_state__c" },
+        { "label": "Planned", "value": "planned_state1__c" },
+        { "label": "Suspended", "value": "suspended_state__c" },
+        { "label": "Transferred", "value": "transferred_state__c" },
+        { "label": "Withdrawn", "value": "withdrawn_state1__c" }
+      ]
+    },
+    {
+      "label": "Registered Product",
+      "value": "registered_drug_product__rim",
+      "states": [
+        { "label": "Approved", "value": "approved_state1__c" },
+        { "label": "Planned", "value": "planned_state1__c" },
+        { "label": "Withdrawn", "value": "withdrawn_state__c" }
+      ]
+    },
+    {
+      "label": "Registered Active Ingredient",
+      "value": "registered_active_ingredient__rim",
+      "states": [
+        { "label": "Approved", "value": "approved_state1__c" },
+        { "label": "Planned", "value": "planned_state1__c" },
+        { "label": "Withdrawn", "value": "withdrawn_state__c" }
+      ]
+    },
+    {
+      "label": "Registered Inactive Ingredient",
+      "value": "registered_inactive_ingredient__rim",
+      "states": [
+        { "label": "Approved", "value": "approved_state1__c" },
+        { "label": "Planned", "value": "planned_state1__c" },
+        { "label": "Withdrawn", "value": "withdrawn_state__c" }
+      ]
+    },
+    {
+      "label": "Registered Packaging",
+      "value": "registration_packaging__rim",
+      "states": [
+        { "label": "Approved", "value": "approved_state1__c" },
+        { "label": "Planned", "value": "planned_state1__c" },
+        { "label": "Withdrawn", "value": "withdrawn_state__c" }
+      ]
+    },
+    {
+      "label": "Registered Shelf Life and Storage",
+      "value": "registered_shelf_life_and_storage__v",
+      "states": [
+        { "label": "Approved", "value": "approved_state__c" },
+        { "label": "Planned", "value": "planned_state__c" },
+        { "label": "Withdrawn", "value": "withdrawn_state__c" }
+      ]
+    },
+    {
+      "label": "Submission",
+      "value": "submission__v",
+      "states": [
+        { "label": "Archived (careful!!)", "value": "archived_state__c" },
+        { "label": "Deferred", "value": "deferred_state__c" },
+        { "label": "Distributed", "value": "distributed_state__c" },
+        { "label": "HA Received", "value": "ha_received_state__c" },
+        { "label": "In Progress", "value": "in_progress_state__c" },
+        { "label": "Inactive", "value": "inactive_state__c" },
+        { "label": "Planned", "value": "planned_state__c" },
+        {
+          "label": "Ready for Submission",
+          "value": "ready_for_submission_state__c"
+        },
+        { "label": "Sent to HA", "value": "sent_to_health_authority_state__c" }
+      ]
+    }
+  ]
+}
