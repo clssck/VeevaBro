@@ -12,14 +12,20 @@ const elements = {
 };
 
 // Configuration
-const catPics = [
-  "crying_cat.png",
-  "grinning_cat.png",
-  "kissing_cat.png",
-  "pouting_cat.png",
-  "tearsofjoy_cat.png",
-  "weary_cat.png",
-  "wrysmile_cat.png",
+const emojiFrames = [
+  "😺",
+  "😸",
+  "😹",
+  "😻",
+  "😼",
+  "😽",
+  "🙀",
+  "😿",
+  "😾",
+  "🐱",
+  "😼",
+  "😼",
+  "🐈‍⬛",
 ];
 
 // Initialization
@@ -28,7 +34,7 @@ document.addEventListener("DOMContentLoaded", initializeOptions);
 function initializeOptions() {
   loadSavedSettings();
   setupEventListeners();
-  setTimeout(startCatTetris, 1000);
+  setTimeout(startEmojiAnimation, 1000);
 }
 
 // Settings Management
@@ -157,52 +163,51 @@ function updateSessionIndicator(hasSession) {
   elements.sessionIndicator.classList.toggle("indicator-red", !hasSession);
 }
 
-// Cat Tetris Game
-function startCatTetris() {
+// Emoji Animation
+function startEmojiAnimation() {
   const container = document.body;
   const containerWidth = container.clientWidth;
   const containerHeight = container.clientHeight;
-  const catSize = 50;
-  const columns = Math.floor(containerWidth / catSize);
+  const emojiSize = 50;
+  const columns = Math.floor(containerWidth / emojiSize);
   const grid = new Array(columns).fill(containerHeight);
 
-  function dropCat() {
-    const cat = createCatElement();
+  function dropEmoji() {
+    const emoji = createEmojiElement();
     const column = Math.floor(Math.random() * columns);
-    cat.style.left = `${column * catSize}px`;
-    cat.style.top = "-50px";
-    container.appendChild(cat);
+    emoji.style.left = `${column * emojiSize}px`;
+    emoji.style.top = "-50px";
+    container.appendChild(emoji);
 
     setTimeout(() => {
-      cat.style.top = `${grid[column] - catSize}px`;
-      grid[column] -= catSize;
+      emoji.style.top = `${grid[column] - emojiSize}px`;
+      grid[column] -= emojiSize;
     }, 0);
 
     if (Math.min(...grid) > 0) {
-      catTetrisInterval = setTimeout(dropCat, 300);
+      emojiAnimationInterval = setTimeout(dropEmoji, 300);
     }
   }
 
-  dropCat();
+  dropEmoji();
 }
 
-function createCatElement() {
-  const cat = document.createElement("img");
-  cat.src = chrome.runtime.getURL(
-    `images/${catPics[Math.floor(Math.random() * catPics.length)]}`
-  );
-  cat.style.position = "absolute";
-  cat.style.width = "50px";
-  cat.style.height = "50px";
-  cat.style.transition = "top 0.5s ease-in";
-  return cat;
+function createEmojiElement() {
+  const emoji = document.createElement("div");
+  emoji.textContent =
+    emojiFrames[Math.floor(Math.random() * emojiFrames.length)];
+  emoji.style.position = "absolute";
+  emoji.style.fontSize = "50px";
+  emoji.style.transition = "top 0.5s ease-in";
+  emoji.classList.add("emoji-animation");
+  return emoji;
 }
 
-let catTetrisInterval;
+let emojiAnimationInterval;
 
 // Cleanup
 window.addEventListener("unload", () => {
-  if (catTetrisInterval) {
-    clearTimeout(catTetrisInterval);
+  if (emojiAnimationInterval) {
+    clearTimeout(emojiAnimationInterval);
   }
 });

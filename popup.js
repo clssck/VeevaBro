@@ -1,4 +1,4 @@
-// Constants
+// Constants for API endpoints and storage keys
 const API_VERSION_PREFIX = "v";
 const CSV_MIME_TYPE = "text/csv;charset=utf-8;";
 const FILE_UPLOAD_ENDPOINT = "/services/file_staging/items";
@@ -35,6 +35,7 @@ let state = {
 let configData = null;
 
 // Utility Functions
+
 function logMessage(message) {
   console.log(message);
   const logEntry = document.createElement("div");
@@ -55,7 +56,6 @@ function updateStatus(message, isError = false) {
 }
 
 // Main Functions
-document.addEventListener("DOMContentLoaded", initializePopup);
 
 async function initializePopup() {
   try {
@@ -76,16 +76,23 @@ function setupEventListeners() {
   elements.uploadAndLoadButton.addEventListener("click", handleUploadAndLoad);
   elements.form.addEventListener("input", saveFormData);
   elements.objectSelect.addEventListener("change", updateLifecycleSelect);
-  elements.lifecycleSelect.addEventListener("change", () => {
-    logMessage(`Lifecycle changed to: ${elements.lifecycleSelect.value}`);
+  elements.lifecycleSelect.addEventListener("change", saveFormData);
+  document
+    .getElementById("resetFormButton")
+    .addEventListener("click", resetForm);
+  window.addEventListener("beforeunload", saveFormData);
+}
+
+function resetForm() {
+  elements.form.reset();
+  chrome.storage.local.remove(STORAGE_KEYS.FORM_DATA, () => {
+    logMessage("Form reset and saved data cleared");
+    updateLifecycleSelect();
   });
-  document.getElementById("resetFormButton").addEventListener("click", () => {
-    logMessage("Form reset");
-  });
-  updateLifecycleSelect();
 }
 
 // Session and Config Management
+
 async function checkExistingSession() {
   try {
     const data = await chrome.storage.sync.get([
@@ -162,16 +169,16 @@ async function loadFormData() {
     if (result[STORAGE_KEYS.FORM_DATA]) {
       elements.objectSelect.value =
         result[STORAGE_KEYS.FORM_DATA].objectType || "";
-      updateLifecycleSelect();
-      elements.lifecycleSelect.value =
-        result[STORAGE_KEYS.FORM_DATA].lifecycle || "";
       elements.objectIdsInput.value =
         result[STORAGE_KEYS.FORM_DATA].objectIds || "";
+      await updateLifecycleSelect();
+      elements.lifecycleSelect.value =
+        result[STORAGE_KEYS.FORM_DATA].lifecycle || "";
       logMessage(
         `Form data loaded: ${JSON.stringify(result[STORAGE_KEYS.FORM_DATA])}`
       );
     } else {
-      updateLifecycleSelect();
+      await updateLifecycleSelect();
     }
   } catch (error) {
     logError("Failed to load form data", error);
@@ -193,7 +200,7 @@ async function saveFormData() {
   }
 }
 
-function updateLifecycleSelect() {
+async function updateLifecycleSelect() {
   const selectedObject = elements.objectSelect.value;
   logMessage(`Selected object: ${selectedObject}`);
 
@@ -224,6 +231,12 @@ function updateLifecycleSelect() {
     logMessage("No lifecycle options found for the selected object");
   }
 
+  // Restore the previously selected lifecycle if it exists
+  const result = await chrome.storage.local.get(STORAGE_KEYS.FORM_DATA);
+  if (result[STORAGE_KEYS.FORM_DATA]?.lifecycle) {
+    elements.lifecycleSelect.value = result[STORAGE_KEYS.FORM_DATA].lifecycle;
+  }
+
   logMessage(
     `Lifecycle options updated: ${elements.lifecycleSelect.innerHTML}`
   );
@@ -231,6 +244,7 @@ function updateLifecycleSelect() {
 }
 
 // CSV Generation and File Operations
+
 function createCSVFile(objectIds, lifecycle, filename) {
   const csvContent = `id,state__v\n${objectIds
     .split(",")
@@ -323,6 +337,7 @@ async function loadCSVFile(
 }
 
 // Event Handlers
+
 function openSettings() {
   chrome.runtime.openOptionsPage();
 }
@@ -384,7 +399,7 @@ async function handleUploadAndLoad() {
         state.sessionId,
         state.vaultUrl,
         state.apiVersion,
-        uploadResult.data.path, // Use the full path returned from the upload
+        uploadResult.data.path,
         objectType
       );
       if (loadResult.responseStatus === "SUCCESS") {
@@ -401,49 +416,27 @@ async function handleUploadAndLoad() {
   }
 }
 
-async function loadCSVFile(
-  sessionId,
-  vaultUrl,
-  apiVersion,
-  filePath,
-  objectType
-) {
-  const loadUrl = `${vaultUrl}/api/${API_VERSION_PREFIX}${apiVersion}${CSV_LOAD_ENDPOINT}`;
-  logMessage(`Loading CSV file from: ${loadUrl}`);
+// Initialize the popup when the DOM content is loaded
+document.addEventListener("DOMContentLoaded", initializePopup);
 
-  const payload = JSON.stringify([
-    {
-      object_type: "vobjects__v",
-      object: objectType,
-      action: "update",
-      file: filePath, // This should now be the full path
-      recordmigrationmode: true,
-      order: 1,
-    },
-  ]);
+function addResetButton() {
+  const header = document.querySelector("header");
+  const resetButton = document.createElement("button");
+  resetButton.textContent = "Reset Form";
+  resetButton.id = "resetFormButton";
+  resetButton.className = "btn btn-text";
 
-  logMessage(`Payload: ${payload}`);
+  // Create a container for the button
+  const buttonContainer = document.createElement("div");
+  buttonContainer.style.position = "absolute";
+  buttonContainer.style.top = "var(--spacing-md)";
+  buttonContainer.style.right = "var(--spacing-md)";
 
-  try {
-    const response = await fetch(loadUrl, {
-      method: "POST",
-      headers: {
-        Authorization: sessionId,
-        "Content-Type": "application/json",
-      },
-      body: payload,
-    });
+  // Add the button to the container
+  buttonContainer.appendChild(resetButton);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to load CSV file: ${errorText}`);
-    }
+  // Insert the container into the header
+  header.appendChild(buttonContainer);
 
-    const result = await response.json();
-    logMessage(`Load result: ${JSON.stringify(result)}`);
-    return result;
-  } catch (error) {
-    logError("Error in loadCSVFile", error);
-    throw error;
-  }
+  resetButton.addEventListener("click", resetForm);
 }
