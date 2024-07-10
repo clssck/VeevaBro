@@ -117,10 +117,10 @@ async function loadConfigData() {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const text = await response.text();
-    logMessage(`Config file content: ${text}`); // Log the raw JSON text
+    logMessage(`Config file content: ${text}`);
 
     configData = JSON.parse(text);
-    logMessage(`Parsed config data: ${JSON.stringify(configData)}`); // Log the parsed JSON
+    logMessage(`Parsed config data: ${JSON.stringify(configData)}`);
 
     if (!configData || !Array.isArray(configData.objects)) {
       throw new Error("Invalid config data structure");
@@ -162,7 +162,7 @@ async function loadFormData() {
     if (result[STORAGE_KEYS.FORM_DATA]) {
       elements.objectSelect.value =
         result[STORAGE_KEYS.FORM_DATA].objectType || "";
-      updateLifecycleSelect(); // Call this here to update lifecycle options
+      updateLifecycleSelect();
       elements.lifecycleSelect.value =
         result[STORAGE_KEYS.FORM_DATA].lifecycle || "";
       elements.objectIdsInput.value =
@@ -171,7 +171,7 @@ async function loadFormData() {
         `Form data loaded: ${JSON.stringify(result[STORAGE_KEYS.FORM_DATA])}`
       );
     } else {
-      updateLifecycleSelect(); // Ensure lifecycle options are populated even if no form data exists
+      updateLifecycleSelect();
     }
   } catch (error) {
     logError("Failed to load form data", error);
@@ -197,7 +197,7 @@ function updateLifecycleSelect() {
   const selectedObject = elements.objectSelect.value;
   logMessage(`Selected object: ${selectedObject}`);
 
-  if (!configData || !configData.objects) {
+  if (!configData?.objects) {
     logError("Config data is missing or invalid");
     return;
   }
@@ -230,13 +230,9 @@ function updateLifecycleSelect() {
   logMessage(`Selected lifecycle: ${elements.lifecycleSelect.value}`);
 }
 
-elements.lifecycleSelect.addEventListener("change", () => {
-  logMessage(`Lifecycle changed to: ${elements.lifecycleSelect.value}`);
-});
-
 // CSV Generation and File Operations
 function createCSVFile(objectIds, lifecycle, filename) {
-  const csvContent = `Object ID,Lifecycle\n${objectIds
+  const csvContent = `id,state__v\n${objectIds
     .split(",")
     .map((id) => `${id.trim()},${lifecycle}`)
     .join("\n")}`;
@@ -244,9 +240,16 @@ function createCSVFile(objectIds, lifecycle, filename) {
   return new File([blob], filename, { type: CSV_MIME_TYPE });
 }
 
+function generateFilename(objectName) {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  return `${objectName}_lifecycle_update_${timestamp}.csv`;
+}
+
 async function uploadCSVFile(sessionId, vaultUrl, apiVersion, file, filename) {
   const formData = new FormData();
   formData.append("file", file, filename);
+  formData.append("path", `/u13063421/upload/${filename}`);
+  formData.append("kind", "file");
 
   const uploadUrl = `${vaultUrl}/api/${API_VERSION_PREFIX}${apiVersion}${FILE_UPLOAD_ENDPOINT}`;
   logMessage(`Uploading CSV file to: ${uploadUrl}`);
@@ -327,7 +330,9 @@ function openSettings() {
 function handleGenerateCsv() {
   const objectIds = elements.objectIdsInput.value.trim();
   const lifecycle = elements.lifecycleSelect.value;
-  const filename = "lifecycle_update.csv";
+  const objectName =
+    elements.objectSelect.options[elements.objectSelect.selectedIndex].text;
+  const filename = generateFilename(objectName);
 
   if (!objectIds || !lifecycle) {
     updateStatus("Please fill in all fields", true);
@@ -348,7 +353,9 @@ async function handleUploadAndLoad() {
   const objectIds = elements.objectIdsInput.value.trim();
   const lifecycle = elements.lifecycleSelect.value;
   const objectType = elements.objectSelect.value;
-  const filename = "lifecycle_update.csv";
+  const objectName =
+    elements.objectSelect.options[elements.objectSelect.selectedIndex].text;
+  const filename = generateFilename(objectName);
 
   if (!objectIds || !lifecycle || !objectType) {
     updateStatus("Please fill in all fields", true);
@@ -372,16 +379,71 @@ async function handleUploadAndLoad() {
       csvFile,
       filename
     );
-    await loadCSVFile(
-      state.sessionId,
-      state.vaultUrl,
-      state.apiVersion,
-      uploadResult.file,
-      objectType
-    );
-    updateStatus("CSV uploaded and loaded successfully", false);
+    if (uploadResult.responseStatus === "SUCCESS") {
+      const loadResult = await loadCSVFile(
+        state.sessionId,
+        state.vaultUrl,
+        state.apiVersion,
+        uploadResult.data.path, // Use the full path returned from the upload
+        objectType
+      );
+      if (loadResult.responseStatus === "SUCCESS") {
+        updateStatus("CSV uploaded and loaded successfully", false);
+      } else {
+        throw new Error(`Load failed: ${JSON.stringify(loadResult.errors)}`);
+      }
+    } else {
+      throw new Error(`Upload failed: ${JSON.stringify(uploadResult.errors)}`);
+    }
   } catch (error) {
     logError("Error in upload and load process", error);
     updateStatus(`Error: ${error.message}`, true);
+  }
+}
+
+async function loadCSVFile(
+  sessionId,
+  vaultUrl,
+  apiVersion,
+  filePath,
+  objectType
+) {
+  const loadUrl = `${vaultUrl}/api/${API_VERSION_PREFIX}${apiVersion}${CSV_LOAD_ENDPOINT}`;
+  logMessage(`Loading CSV file from: ${loadUrl}`);
+
+  const payload = JSON.stringify([
+    {
+      object_type: "vobjects__v",
+      object: objectType,
+      action: "update",
+      file: filePath, // This should now be the full path
+      recordmigrationmode: true,
+      order: 1,
+    },
+  ]);
+
+  logMessage(`Payload: ${payload}`);
+
+  try {
+    const response = await fetch(loadUrl, {
+      method: "POST",
+      headers: {
+        Authorization: sessionId,
+        "Content-Type": "application/json",
+      },
+      body: payload,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to load CSV file: ${errorText}`);
+    }
+
+    const result = await response.json();
+    logMessage(`Load result: ${JSON.stringify(result)}`);
+    return result;
+  } catch (error) {
+    logError("Error in loadCSVFile", error);
+    throw error;
   }
 }
