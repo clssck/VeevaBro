@@ -1,15 +1,44 @@
-document.addEventListener("DOMContentLoaded", function () {
-  const saveButton = document.getElementById("saveButton");
-  const testButton = document.getElementById("testButton");
-  const statusDiv = document.getElementById("status");
-  const vaultUrlInput = document.getElementById("vaultUrl");
-  const apiVersionInput = document.getElementById("apiVersion");
-  const usernameInput = document.getElementById("username");
-  const passwordInput = document.getElementById("password");
-  const sessionIdContainer = document.getElementById("sessionIdContainer");
-  const sessionIndicator = document.getElementById("sessionIndicator");
+// DOM Elements
+const elements = {
+  saveButton: document.getElementById("saveButton"),
+  testButton: document.getElementById("testButton"),
+  statusDiv: document.getElementById("status"),
+  vaultUrlInput: document.getElementById("vaultUrl"),
+  apiVersionInput: document.getElementById("apiVersion"),
+  usernameInput: document.getElementById("username"),
+  passwordInput: document.getElementById("password"),
+  sessionIdContainer: document.getElementById("sessionIdContainer"),
+  sessionIndicator: document.getElementById("sessionIndicator"),
+};
 
-  // Load saved settings
+// Configuration
+const emojiFrames = [
+  "😺",
+  "😸",
+  "😹",
+  "😻",
+  "😼",
+  "😽",
+  "🙀",
+  "😿",
+  "😾",
+  "🐱",
+  "😼",
+  "😼",
+  "🐈‍⬛",
+];
+
+// Initialization
+document.addEventListener("DOMContentLoaded", initializeOptions);
+
+function initializeOptions() {
+  loadSavedSettings();
+  setupEventListeners();
+  setTimeout(startEmojiAnimation, 1000);
+}
+
+// Settings Management
+function loadSavedSettings() {
   chrome.storage.sync.get(
     ["vaultUrl", "apiVersion", "username", "password", "sessionId"],
     function (items) {
@@ -20,165 +49,165 @@ document.addEventListener("DOMContentLoaded", function () {
         );
         return;
       }
-      if (items.vaultUrl) {
-        vaultUrlInput.value = items.vaultUrl;
-      }
-      if (items.apiVersion) {
-        apiVersionInput.value = items.apiVersion;
-      }
-      if (items.username) {
-        usernameInput.value = items.username;
-      }
-      if (items.password) {
-        passwordInput.value = items.password;
-      }
-      if (items.sessionId) {
-        sessionIdContainer.style.display = "block";
-        sessionIndicator.classList.remove("indicator-red");
-        sessionIndicator.classList.add("indicator-green");
-      } else {
-        sessionIdContainer.style.display = "block";
-        sessionIndicator.classList.remove("indicator-green");
-        sessionIndicator.classList.add("indicator-red");
-      }
+      populateInputs(items);
+      updateSessionIndicator(!!items.sessionId);
     }
   );
+}
 
-  saveButton.addEventListener("click", function () {
-    const vaultUrl = vaultUrlInput.value;
-    const apiVersion = apiVersionInput.value;
-    const username = usernameInput.value;
-    const password = passwordInput.value;
+function populateInputs(items) {
+  elements.vaultUrlInput.value = items.vaultUrl || "";
+  elements.apiVersionInput.value = items.apiVersion || "";
+  elements.usernameInput.value = items.username || "";
+  elements.passwordInput.value = items.password || "";
+}
 
-    if (!vaultUrl || !apiVersion || !username || !password) {
-      updateStatus("Error: All fields are required", true);
-      return;
-    }
+function setupEventListeners() {
+  elements.saveButton.addEventListener("click", saveSettings);
+  elements.testButton.addEventListener("click", testConnection);
+}
 
-    chrome.storage.sync.set(
-      { vaultUrl, apiVersion, username, password },
-      function () {
-        updateStatus("Settings saved successfully", false);
-      }
-    );
+function saveSettings() {
+  const settings = getInputValues();
+  if (!validateInputs(settings)) return;
+
+  chrome.storage.sync.set(settings, function () {
+    updateStatus("Settings saved successfully", false);
   });
+}
 
-  testButton.addEventListener("click", function () {
-    const vaultUrl = vaultUrlInput.value;
-    const apiVersion = apiVersionInput.value;
-    const username = usernameInput.value;
-    const password = passwordInput.value;
+function getInputValues() {
+  return {
+    vaultUrl: elements.vaultUrlInput.value,
+    apiVersion: elements.apiVersionInput.value,
+    username: elements.usernameInput.value,
+    password: elements.passwordInput.value,
+  };
+}
 
-    if (!vaultUrl || !apiVersion || !username || !password) {
+function validateInputs(settings) {
+  for (let key in settings) {
+    if (!settings[key]) {
       updateStatus("Error: All fields are required", true);
-      return;
+      return false;
     }
+  }
+  return true;
+}
 
-    // Ensure the URL starts with https://
-    let formattedVaultUrl = vaultUrl.trim();
-    if (!formattedVaultUrl.startsWith("https://")) {
-      formattedVaultUrl = "https://" + formattedVaultUrl;
-    }
-    vaultUrlInput.value = formattedVaultUrl;
+// Connection Testing
+function testConnection() {
+  const settings = getInputValues();
+  if (!validateInputs(settings)) return;
 
-    updateStatus("Testing connection...", false);
+  const formattedVaultUrl = ensureHttps(settings.vaultUrl);
+  elements.vaultUrlInput.value = formattedVaultUrl;
 
-    // Send a message to the background script to test the connection
-    chrome.runtime.sendMessage(
-      {
-        action: "authenticate",
-        config: { vaultUrl: formattedVaultUrl, apiVersion, username, password },
+  updateStatus("Testing connection...", false);
+  sendAuthenticationRequest(formattedVaultUrl, settings);
+}
+
+function ensureHttps(url) {
+  return url.trim().startsWith("https://")
+    ? url.trim()
+    : "https://" + url.trim();
+}
+
+function sendAuthenticationRequest(formattedVaultUrl, settings) {
+  chrome.runtime.sendMessage(
+    {
+      action: "authenticate",
+      config: {
+        vaultUrl: formattedVaultUrl,
+        apiVersion: settings.apiVersion,
+        username: settings.username,
+        password: settings.password,
       },
-      function (response) {
-        if (chrome.runtime.lastError) {
-          updateStatus("Error: " + chrome.runtime.lastError.message, true);
-          return;
-        }
+    },
+    handleAuthenticationResponse
+  );
+}
 
-        if (response.success) {
-          updateStatus(
-            "Connection successful! Session ID: " + response.sessionId,
-            false
-          );
-          sessionIndicator.classList.remove("indicator-red");
-          sessionIndicator.classList.add("indicator-green");
-          chrome.storage.sync.set({ sessionId: response.sessionId });
-        } else {
-          updateStatus(
-            "Connection failed: " + (response.error || "Unknown error"),
-            true
-          );
-          sessionIndicator.classList.remove("indicator-green");
-          sessionIndicator.classList.add("indicator-red");
-          chrome.storage.sync.remove("sessionId");
-        }
-      }
+function handleAuthenticationResponse(response) {
+  if (chrome.runtime.lastError) {
+    updateStatus("Error: " + chrome.runtime.lastError.message, true);
+    return;
+  }
+
+  if (response.success) {
+    updateStatus(
+      "Connection successful! Session ID: " + response.sessionId,
+      false
     );
-  });
-
-  function updateStatus(message, isError) {
-    statusDiv.textContent = message;
-    statusDiv.className = isError ? "error" : "success";
-  }
-
-  const catPics = [
-    "crying_cat.png",
-    "grinning_cat.png",
-    "kissing_cat.png",
-    "pouting_cat.png",
-    "tearsofjoy_cat.png",
-    "weary_cat.png",
-    "wrysmile_cat.png",
-  ];
-
-  function createCatElement() {
-    const cat = document.createElement("img");
-    cat.src = chrome.runtime.getURL(
-      `images/${catPics[Math.floor(Math.random() * catPics.length)]}`
+    updateSessionIndicator(true);
+    chrome.storage.sync.set({ sessionId: response.sessionId });
+  } else {
+    updateStatus(
+      "Connection failed: " + (response.error || "Unknown error"),
+      true
     );
-    cat.style.position = "absolute";
-    cat.style.width = "50px";
-    cat.style.height = "50px";
-    cat.style.transition = "top 0.5s ease-in";
-    return cat;
+    updateSessionIndicator(false);
+    chrome.storage.sync.remove("sessionId");
+  }
+}
+
+// UI Updates
+function updateStatus(message, isError) {
+  elements.statusDiv.textContent = message;
+  elements.statusDiv.className = isError ? "error" : "success";
+}
+
+function updateSessionIndicator(hasSession) {
+  elements.sessionIdContainer.style.display = "block";
+  elements.sessionIndicator.classList.toggle("indicator-green", hasSession);
+  elements.sessionIndicator.classList.toggle("indicator-red", !hasSession);
+}
+
+// Emoji Animation
+function startEmojiAnimation() {
+  const container = document.body;
+  const containerWidth = container.clientWidth;
+  const containerHeight = container.clientHeight;
+  const emojiSize = 50;
+  const columns = Math.floor(containerWidth / emojiSize);
+  const grid = new Array(columns).fill(containerHeight);
+
+  function dropEmoji() {
+    const emoji = createEmojiElement();
+    const column = Math.floor(Math.random() * columns);
+    emoji.style.left = `${column * emojiSize}px`;
+    emoji.style.top = "-50px";
+    container.appendChild(emoji);
+
+    setTimeout(() => {
+      emoji.style.top = `${grid[column] - emojiSize}px`;
+      grid[column] -= emojiSize;
+    }, 0);
+
+    if (Math.min(...grid) > 0) {
+      emojiAnimationInterval = setTimeout(dropEmoji, 300);
+    }
   }
 
-  let catTetrisInterval;
+  dropEmoji();
+}
 
-  function startCatTetris() {
-    const container = document.body;
-    const containerWidth = container.clientWidth;
-    const containerHeight = container.clientHeight;
-    const catSize = 50;
-    const columns = Math.floor(containerWidth / catSize);
+function createEmojiElement() {
+  const emoji = document.createElement("div");
+  emoji.textContent =
+    emojiFrames[Math.floor(Math.random() * emojiFrames.length)];
+  emoji.style.position = "absolute";
+  emoji.style.fontSize = "50px";
+  emoji.style.transition = "top 0.5s ease-in";
+  emoji.classList.add("emoji-animation");
+  return emoji;
+}
 
-    const grid = new Array(columns).fill(containerHeight);
+let emojiAnimationInterval;
 
-    function dropCat() {
-      const cat = createCatElement();
-      const column = Math.floor(Math.random() * columns);
-      cat.style.left = `${column * catSize}px`;
-      cat.style.top = "-50px";
-      container.appendChild(cat);
-
-      setTimeout(() => {
-        cat.style.top = `${grid[column] - catSize}px`;
-        grid[column] -= catSize;
-      }, 0);
-
-      if (Math.min(...grid) > 0) {
-        catTetrisInterval = setTimeout(dropCat, 300);
-      }
-    }
-
-    dropCat();
+// Cleanup
+window.addEventListener("unload", () => {
+  if (emojiAnimationInterval) {
+    clearTimeout(emojiAnimationInterval);
   }
-
-  setTimeout(startCatTetris, 1000);
-
-  window.addEventListener("unload", () => {
-    if (catTetrisInterval) {
-      clearTimeout(catTetrisInterval);
-    }
-  });
 });

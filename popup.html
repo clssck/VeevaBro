@@ -13,13 +13,15 @@
   <body class="popup">
     <div class="container">
       <header>
-        <h1>Lock and Load</h1>
-        <div id="sessionIdContainer">
-          <span>Session Status:</span>
-          <div
-            id="sessionIndicator"
-            aria-label="Session status indicator"
-          ></div>
+        <div class="header-content">
+          <h1>Lock and Load</h1>
+          <div id="sessionIdContainer">
+            <span>Session Status:</span>
+            <div
+              id="sessionIndicator"
+              aria-label="Session status indicator"
+            ></div>
+          </div>
         </div>
       </header>
 
@@ -54,6 +56,9 @@
               class="btn btn-secondary"
             >
               Upload and Load CSV
+            </button>
+            <button type="button" id="resetFormButton" class="btn btn-primary">
+              Reset Form
             </button>
           </div>
         </form>

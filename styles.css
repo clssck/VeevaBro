@@ -272,3 +272,7 @@ button:focus {
     margin-bottom: var(--spacing-sm);
   }
 }
+#resetFormButton {
+  font-size: var(--font-size-small);
+  padding: var(--spacing-xs) var(--spacing-sm);
+}
